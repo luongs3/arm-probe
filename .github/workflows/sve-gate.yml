@@ -1,0 +1,28 @@
+name: sve-gate-probe
+on: [workflow_dispatch, push]
+jobs:
+  probe:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Runner identity
+        run: |
+          echo "=== nproc ==="; nproc
+          echo "=== mem ==="; free -g | head -2
+          echo "=== features ==="
+          grep -m1 "^Features" /proc/cpuinfo | tr ' ' '\n' | grep -E "^(sve|sve2|svei8mm|svebf16|i8mm|bf16)$" | tr '\n' ' '; echo
+
+      - name: Measure SVE vector length (svcntb) — the KleidiAI gate input
+        run: |
+          cat > sve.c <<'EOF'
+          #include <stdio.h>
+          #include <arm_sve.h>
+          int main(void) {
+              unsigned long b = svcntb();
+              printf("svcntb() = %lu bytes = %lu bits\n", b, b * 8);
+              printf("QK8_0    = 32 bytes (what kleidiai.cpp:209 requires)\n");
+              printf("VERDICT  : CPU_FEATURE_SVE %s be set by KleidiAI on this core\n",
+                     b == 32 ? "WILL" : "will NEVER");
+              return 0;
+          }
+          EOF
+          gcc -march=armv8-a+sve -O2 sve.c -o sve && ./sve
