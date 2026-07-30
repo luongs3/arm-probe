@@ -1,0 +1,16 @@
+name: arm-probe
+on: [workflow_dispatch, push]
+jobs:
+  probe:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: CPU identity + ISA features
+        run: |
+          echo "=== uname ==="; uname -m
+          echo "=== nproc ==="; nproc
+          echo "=== cpuinfo ==="
+          grep -m1 -E "CPU implementer|CPU part" /proc/cpuinfo
+          echo "=== FEATURES ==="
+          grep -m1 "^Features" /proc/cpuinfo | tr ' ' '\n' | grep -E "^(sve|sve2|svei8mm|svebf16|i8mm|bf16|asimddp|asimdhp)$" | tr '\n' ' '
+          echo
+          echo "=== memory ==="; free -g | head -2
